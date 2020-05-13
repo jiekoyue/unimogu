@@ -92,7 +92,7 @@
 				courseInfo: '',
 				isVideo: true,
 				mlarr: ['目录', '讲师介绍', '评价'],
-				mindex: 2,
+				mindex: 0,
 				id:null
 			}
 		},
@@ -195,7 +195,7 @@
 					icon:'none'
 				});
 			},
-			//
+			//点击开始学习
 			palyfn(){
 				uni.navigateTo({
 					url:'/pages/play/index?id='+this.id

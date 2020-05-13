@@ -18,8 +18,20 @@
 				</view>
 			</view>
 			<view class="comment">
-				<image src="/static/images/evaluate@2x.png" alt />
+				<image @click="evaluate" src="/static/images/evaluate@2x.png" alt />
 			</view>
+			<!-- 评论款框-->
+			<modal ref="modal" @tj="tjfn">
+				<view class="comment-content">
+					<textarea v-model="plTxt" placeholder="请输入评论内容哦~" rows="5"></textarea>
+				</view>
+				<view style="margin-top:10rpx;">
+					<text>评分：</text>
+					<view style="float:right;margin-right:300rpx;margin-top:-5rpx;">
+						<srar v-model="plxx" isDj />
+					</view>
+				</view>
+			</modal>
 		</view>
 		<!-- 视频列表 -->
 		<view class="course-progress">
@@ -37,7 +49,13 @@
 
 <script>
 	import ax from '../../utils/ax';
+	import modal from '../../components/modal/index.vue';
+	import srar from '../../components/star/index.vue';
 	export default {
+		components: {
+			modal,
+			srar
+		},
 		data() {
 			return {
 				id: null,
@@ -45,8 +63,10 @@
 				palyUrl: '',
 				videoid: null,
 				palyIndex: -1,
-				palyTime:null,
-				palyTimeArr:[0]
+				palyTime: null,
+				palyTimeArr: [0],
+				plTxt: '',
+				plxx: 5
 			}
 		},
 		computed: {
@@ -74,17 +94,23 @@
 				});
 				this.courInfo = data.message;
 				for (var i = 0; i < data.message.videos.length; i++) {
-					if(!data.message.videos[i].is_study){
-						if(i==0) return;
-						this.palyIndex = i-1;
+					if (!data.message.videos[i].is_study) {
+						if (i == 0) return;
+						this.palyIndex = i - 1;
 						const videoid = uni.createVideoContext('videoId');
-						this.palyUrl = this.courInfo.videos[i-1].video_url;
+						this.palyUrl = this.courInfo.videos[i - 1].video_url;
 						setTimeout(() => {
 							videoid.play();
 						}, 200);
 						return;
 					}
 				}
+				this.palyIndex = data.message.videos.length - 1;
+				const videoid = uni.createVideoContext('videoId');
+				this.palyUrl = this.courInfo.videos[this.palyIndex].video_url;
+				setTimeout(() => {
+					// videoid.play();
+				}, 200);
 			},
 			//点击视频列表
 			async playVideofn(index) {
@@ -151,21 +177,76 @@
 				})
 			},
 			//当视频暂停时
-			shipat(e){
-				console.log('视频暂停',e);
+			shipat(e) {
+				console.log('视频暂停', e);
 				this.palyTime = this.palyTimeArr[0];
 			},
 			//当视频播放完时
-			bfwb(e){
-				console.log('视频完',e);
-				if(this.palyIndex>=this.courInfo.videos.length-1) return;
+			bfwb(e) {
+				console.log('视频完', e);
+				if (this.palyIndex >= this.courInfo.videos.length - 1) return;
 				this.playVideofn(++this.palyIndex);
 			},
 			//播放进度变化
-			jdbh(e){
-				this.set(this.palyTimeArr,0,e.detail.currentTime);
-				// this.palyTime = e.detail.currentTime;
+			jdbh(e) {
+				// this.set(this.palyTimeArr,0,e.detail.currentTime);
+				this.palyTime = e.detail.currentTime;
 				// console.log(e.detail.currentTime);
+			},
+			//评论
+			async evaluate() {
+				let {
+					data
+				} = await ax({
+					url: 'study/complete',
+					data: {
+						course_id: this.id
+					}
+				});
+				if (!data.complete) {
+					uni.showModal({
+						title: '提示',
+						content: '请先学习完，在来评论~~',
+						showCancel: false,
+						confirmColor: '#fd8d4c'
+					});
+					return;
+				}
+
+				console.log(this.$refs.modal);
+				this.$refs.modal.isShow = true;
+			},
+			// 评论提交
+			async tjfn(){
+				console.log(this.plTxt,this.plxx);
+				if(!this.plTxt) {
+					uni.showToast({
+						title:'评论内容不能为空',
+						icon:'none',
+						duration:1000
+					});
+					return;
+				}
+				let {data} = await ax({
+					url:'comment/create',
+					method:'POST',
+					data:{
+						course_id:this.id,
+						content:this.plTxt,
+						score:this.plxx
+					}
+				});
+				console.log(data);
+				uni.showToast({
+					title:data.message,
+					icon:'none',
+					duration:500
+				});
+				if(data.status==0){
+					setTimeout(()=>{
+						this.$refs.modal.isShow = false;
+					},250);
+				}
 			}
 		},
 		onLoad(e) {
@@ -174,14 +255,14 @@
 		mounted() {
 			this.setInfo();
 		},
-		onShow(){
-			if(!this.palyTime) return;
+		onShow() {
+			if (!this.palyTime) return;
 			const videoid = uni.createVideoContext('videoId');
-			setTimeout(()=>{
+			setTimeout(() => {
 				videoid.play();
-			},200);
+			}, 200);
 		},
-		onHide(){
+		onHide() {
 			const videoid = uni.createVideoContext('videoId');
 			videoid.pause();
 		}
